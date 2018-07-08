@@ -436,5 +436,23 @@ CORS_ORIGIN_ALLOW_ALL = True
 ##
 git add -A
 git commit -a -m "Commit after updating virt env"
+Migrations for 'todo':
+  0001_initial.py:
+    - Create model TodoItem
+(venv) root@ubuntu-base:~/todobakcend/src# cat todo/models.py                  
+from __future__ import unicode_literals
 
+from django.db import models
+
+# Create your models here.
+class TodoItem(models.Model):
+  title = models.CharField(max_length=256, null=True, blank=True)
+  completed = models.BooleanField(blank=True, default=False)
+  url = models.CharField(max_length=256, null=True, blank=True)
+  order = models.IntegerField(null=True, blank=True)
+
+(venv) root@ubuntu-base:~/todobakcend/src# python manage.py makemigrations todo
+
+# To apply migration
+python manage.py migrate
 
