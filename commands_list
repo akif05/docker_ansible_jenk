@@ -456,3 +456,5 @@ class TodoItem(models.Model):
 # To apply migration
 python manage.py migrate
 
+# to run server on all interfaces
+../venv/bin/python manage.py runserver 0.0.0.0:8000
