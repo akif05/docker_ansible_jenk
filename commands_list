@@ -1,0 +1,364 @@
+git remote add origin git@github.com:jmenga/todobackend.git
+git push -u origin master
+
+git remote remove origin
+git remote add origin git@github.com-jmenga:jmenga/todobackend.git
+
+                    run in background  docker-howt:container-port
+docker container run -d --name web1 -p 80:80 microsoft/iis
+docer port web1
+docker inspec -f "{{ .NetworkSettings.Networks.nat.IPAddress }}" web1
+ 
+## Create a Swarm 
+* Create ae Swarm manager
+  * Assign it a crypto ID
+  * Elect it as the Swarm leader
+* Creatate a Swarm config DB
+  * Encript it
+  * Configure it to automatically replicate with all swarms managers
+* Create a Swarm join token for new workers
+* Create a Swarm join token for new manager
+* Configure a new Root CA on the leader
+  * Configure a 90 day certificate rotation period
+  
+docker system info
+docker swarm init
+docker system info
+## check if is swarm active?
+docker node ls
+docker swarm join-token manager
+# switch to node 2
+docker swarm join --token .... token generated from previous command
+docker ls
+# switch to node 3 and 
+docker swarm join --token ... same token....
+docker node ls
+## create token for workers
+docker swarm join-token workers
+# switch to node 4
+docker swarm join --token ... token created from previous command
+docker ls 
+## will show error because node 4 is workers
+# switch to node 3 (manager)
+docker ls
+docker swarm join-token --rotate worker
+
+sudo openssl x509 -in /var/lib/docker/swarm/certificates/swarm-node.cr -text
+# Lock you Swarm with Auto log
+
+# when creating new swarmd
+docker swarm init --aoutlock
+
+# Autolock existing Swarm
+docker swarm update --autolock=true
+# output of the command is
+## --Swarm update.
+## To unlock a swarm manager after it restarts, run the 'docker swarm unlock'
+## command and provide the folowing key:
+#  SWMKEY-1.........
+# Safe the key for future use!!!
+# in node 3
+sudo service docker restarts
+# after restar node does not accept command before unlok
+# run 'docker swarm unlock' and provide the key generated when autolock was applyed
+docker swarm update --cert-expire 48h
+## Swarm updatated
+docker system info
+
+
+ 
+  
+  
+
+## delete all containers in the system
+docker container rm $(docker container ls -aq) -f
+
+# create 3 replicas
+docker service create -d --name ping --network overnet --replicas 3 alpine sleep 1d
+docker service create -d --name pong --network overnet --replicas 3 alpine sleep 1d
+docker service ls
+docker container ls
+docker container exec -it c8 ch
+ping pong
+docker service inspect web --pretty
+
+docker node ls
+docker network ls
+docker network inspect bridge
+docker container run --rm -d --name web -p 8080:80 nginx
+docker port web
+docker network create -d bridge golden-gate
+docker network ls
+
+docker container run --rm -d --network golden-gate alpine sleep 1d
+
+docker network create -d ovlerlay overnet
+docker network ls
+docker service create -d --name pinger --replicas 2 --network overnet allpine sleep 1d
+docker service ls
+docker service ps pinger 
+dockre network inspect overnet
+
+docker container exec -it 279 sh
+ping 10.0.0.6
+
+docker service create -d --name web --network overnet --replicas 1 -p 8080:80 nginx
+docker service inspect web --pretty
+
+
+#connected to default birdg(network)
+docker container run --rm -d alpine sleep 1d
+
+journal -u docker.service
+~/AppData/Local/Docer
+
+# Working with persistent and non persistent data
+# docker volume create local volumes
+docker volume ls
+docker volume create myvol
+docker volume inspect myvol
+docker volume ls
+docker volume create psvol
+ls -l /var/lib/docker/volumes
+# delete volumes
+docker volume rm myvol psvol
+
+# Create container with volume
+docker container run -dit --name voltest \
+ --mount source=ubervol,target=/vol, alpine:latest
+
+docker volume ls
+ls -l /var/lib/docker/volumes
+docker container exec -it voltest sh
+ls -ls /vol/
+echo "some data" > /vol/newfile
+cat /vol/newfile
+# file existing
+# delete the container will not delete the volume
+# volumes are independent from container!!!
+docker container rm voltest -f
+docker volume ls
+# will show the volume
+# We can create new container and mount the volume to it
+docker container run -dit --name vomore --mount source=ubervol,target=/app nginx
+
+## If the volume is attached to container (mounted) we can not delete it
+## First we need to remove the container and the delete the volume
+docker container rm volmore -f
+docker volume rm ubervol
+
+## Create secret
+docker secret create ....
+# send the secret to manager and manager puts it in store where is encrited at rest
+# the create service or update one and explicitely grat secret to service
+# the manager sends the secrtes to the workers that are running
+# service that is otorizet
+docker service create \
+  --name green \
+  --secret sec1 \
+  --replicas 2 \
+  ..
+
+docker secret create wp-sec-v1 .\classified_file
+# docker client is sending the secret to Swarm manager demon
+# over secure channel and is securelly stored in Swam manager raft
+docker secret ls
+docker secret inspect
+docker serfvice create -d --name secret-service `
+  --secret wp-sec-v1 `
+  microsoft/powershell:windowsservercore `
+  PowerShell Start-Sleep -s 86400
+  
+docker service inspect secret-sevice
+docker container ls
+# output of the command is: 
+# CREATED			STATUS 		PORTS	NAMES
+# 446AE0D73AD1	   microsoft/powershell:windowsservercor 
+#                         44 is from 446A.. from above line
+docker container exec -it 44 PowerShell
+# now we are in windows container, and the secret is copied to:
+ls c:\ProgamData\Docker\secrets\
+
+# the secret is in unencripted 
+# in linux container is in /run/secrets
+
+docker secret rm wp-sec-v1
+# if the secret is in use, can't be deleted
+# first delete the service
+docker service rm secret-service
+docker secret rm wp-sec-v1
+
+
+# connect to node1
+cat stackfile.yml
+---
+version: "3.4"
+services:
+
+  redis:
+    images: redis:alpine
+	ports:
+	  - "6379"
+	networks:
+	  - frontend
+	deploy:
+	  replicas: 1
+	  update_config:
+	    parallelism: 2
+		delay: 10s
+    restart_policy:
+	  condition: on-failure
+	  
+  dg:
+    image: postgres: 9.4
+	volumes:
+	  - db-data://var/lib/postgresql/data
+	networks:
+	  - backend
+	deploy:
+	  placement:
+	    constraints: [node.role == manager]
+  vote:
+    image: dockersamples/examplevotingapp_vote:before
+	ports:
+	  - 5000:80
+	networks:
+	  - frontend
+	depends_on
+	  - redis
+	deploy: 
+	  replicas: 2
+	  update_config:
+	    parallelism: 2
+    restart_policy:
+	  condition: on-failure
+		  
+  result:
+    image: dockersamples/examplevotingapp_result:before
+	ports:
+	  - 5001:80
+	networks:
+	ports:
+	  - 5001:80
+	networks:
+	  - backend
+	depends_on:
+	  - db
+	deploy:
+	  replicas: 1
+	  update_config:
+	    parallelism: 2
+		dalay: 10s
+    restart_plisy: 
+	  condition: on-failure
+	    
+  worker:
+    images: dockersamples/examplevotingapp_worker
+	netwokrs:
+	  - frontend
+	  - backend
+	deploy:
+	  mode: replicated
+	  replicas: 1
+	  lablels: [APP=VOTING]
+	  restart_policy:
+	    condition: on-failure
+		delay: 10s
+		max_attempts: 3
+		window: 120s
+    placement:
+	  constraints: [node.role == manager]
+	  
+  visualizer:
+    image: dockersamples/visualizer:stable
+	ports:
+	  - "8080:8080"
+	stop_grace_period: 1m30s
+	volumes:
+	  - "/var/run/docker.sock:/var/run/docker.sock"
+	deploy:
+	  placement:
+	    constraints: [node.role == manager]
+################################################
+ls -l
+stackfile.yml
+docker stack deploy -c stackfile.yml voter
+
+docker stack ps voter
+docker stack services voter
+
+# change to number of replicas running
+docker service scale voter_vote=20
+
+# better way is to edit the stackfile.yml for vote: replica number
+docker stack deploy -c stackfile.yml voter
+
+decker service inspect voter_vote --pretty
+
+	 
+## Docker trusted registry DTR
+docker run -it --rm docker/dtr install `
+  --ucp-node node2 `
+  --ucp-username amdin `
+  --ucp-url https://13.56.159.172 `
+  --ucp-insecure-tls
+  
+  
+networks:
+  frontend:
+  backend
+  
+volumes:
+  db-data:
+  
+#####################################
+docker run --rm -d -p 8080:8080 -p 50000:50000 -v jenkins-data:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock jenkins/jenkins
+
+
+############# djange create virtual environment
+mkdir django-test
+cd django-get
+# create virtual environment
+python3 -m venv django-env
+
+# activate environment
+source . django-env/bin/activate
+
+# to deactivate 
+. djangoe-env/bin/deactivate
+
+
+
+
+
+sudo apt-get install python-setuptools python-dev build-essential -y
+git config --global user.name "Akif Yusein"
+git config --global user.email akif05@gmail.com 
+git init
+echo -e "env-django2/\n" >> .gitignore
+git init cat .gitignore
+git add -A
+git commit -a -m "Initial commit"
+
+ source env-django2/bin/activate
+ pip install pip --upgrade
+ pip install django==1.9
+ pip install djangorestframework==3.3
+ pip install django-cors-headers==1.1
+ cd src
+ python mange.py startapp todo
+ vi settings.py
+ 'rest_framework',
+ 'corsheaders',
+ 'todo'
+ 
+}
+{
+  'corsheaders.mmiddleware.CorsMiddleware',
+  
+  
+at the end
+ CORS_ORIGIN_ALLOW_ALL = True
+ 
+ 
+
