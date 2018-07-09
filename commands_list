@@ -459,3 +459,20 @@ python manage.py migrate
 
 # to run server on all interfaces
 ../venv/bin/python manage.py runserver 0.0.0.0:8000
+
+
+ 
+ root@ubuntu-base:~/todobackend# tree -L 1
+.
+├── commands_list
+├── docker
+├── src
+├── sync_git.sh
+└── venv
+
+ root@ubuntu-base:~/todobackend# pwd
+/root/todobackend
+root@ubuntu-base:~/todobackend# docker run --rm todobackend-dev
+ docker build -t todobackend-dev -f docker/dev/Dockerfile .
+ docker run --rm todobackend-dev
+  
