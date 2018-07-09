@@ -332,6 +332,7 @@ source . django-env/bin/activate
 
 
 sudo apt-get install python-setuptools python-dev build-essential -y
+sudo apt-get install tree locate -y
 git config --global user.name "Akif Yusein"
 git config --global user.email akif05@gmail.com 
 git init
